@@ -4,6 +4,7 @@ from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from app.ingestion.store import initialize_vector_store
+from app.ollama_setup import ensure_ollama_ready
 
 from app.config import LLM_MODEL
 from app.graph.state import RAGState
@@ -85,6 +86,7 @@ graph = builder.compile(
 )
 
 def main():
+  ensure_ollama_ready()
   initialize_vector_store()
 
   config = {
