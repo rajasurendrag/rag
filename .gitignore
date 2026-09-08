@@ -18,6 +18,10 @@ __pycache__/
 *.pyc
 
 
+# Build artifacts
+build/
+*.egg-info/
+
 # Python tooling
 .pytest_cache/
 .mypy_cache/
