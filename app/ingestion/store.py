@@ -1,9 +1,12 @@
+import hashlib
+
 from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings
 
 from app.config import (
   CHROMA_COLLECTION_NAME,
   CHROMA_PERSISTENCE_DIR,
+  DOCUMENTS_DIR,
   EMBEDDING_MODEL,
 )
 
@@ -43,15 +46,45 @@ def ingest_documents():
   return add_documents(chunks)
 
 
-def is_vector_store_initialized():
-  vector_store = create_vector_store()
+def compute_documents_hash():
+  hasher = hashlib.sha256()
 
-  return vector_store._collection.count() > 0
+  for path in sorted(DOCUMENTS_DIR.glob("**/*.md")):
+    hasher.update(path.relative_to(DOCUMENTS_DIR).as_posix().encode("utf-8"))
+    hasher.update(path.read_bytes())
+
+  return hasher.hexdigest()
+
+
+def documents_hash_file():
+  return CHROMA_PERSISTENCE_DIR / ".documents_hash"
+
+
+def read_stored_documents_hash():
+  hash_file = documents_hash_file()
+
+  if not hash_file.exists():
+    return None
+
+  return hash_file.read_text().strip()
+
+
+def write_documents_hash(digest):
+  hash_file = documents_hash_file()
+  hash_file.parent.mkdir(parents=True, exist_ok=True)
+  hash_file.write_text(digest)
 
 
 def initialize_vector_store():
-  if not is_vector_store_initialized():
-    ingest_documents()
+  current_hash = compute_documents_hash()
+
+  if current_hash == read_stored_documents_hash():
+    return
+
+  create_vector_store().reset_collection()
+  ingest_documents()
+
+  write_documents_hash(current_hash)
 
 
 if __name__ == "__main__":
